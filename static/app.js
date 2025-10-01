@@ -1,129 +1,106 @@
-// =========================
-// Importar módulos modernos
-// =========================
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/controls/OrbitControls.js";
-import { STLLoader } from "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/loaders/STLLoader.js";
-
-console.log("✅ app.js cargado con módulos");
+console.log("✅ app.js cargado");
 
 // =========================
-// Configuración del visor 3D
+// Elementos del DOM
 // =========================
 const viewer = document.getElementById("viewer");
-
-// Crear escena
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf0f0f0);
-
-// Cámara
-const camera = new THREE.PerspectiveCamera(
-    75,
-    viewer.clientWidth / viewer.clientHeight,
-    0.1,
-    1000
-);
-camera.position.set(3, 3, 3);
-
-// Render
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-viewer.appendChild(renderer.domElement);
-
-// Luz
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(5, 5, 5).normalize();
-scene.add(light);
-
-// Controles
-const controls = new OrbitControls(camera, renderer.domElement);
-
-// Loader STL
-const loader = new STLLoader();
+const textForm = document.getElementById("text-form");
+const fileForm = document.getElementById("file-form");
+const fileInput = document.getElementById("stl-input");
+const downloadSection = document.getElementById("download-section");
+const downloadLink = document.getElementById("download-link");
 
 // =========================
-// Función para cargar y mostrar STL
+// Función para mostrar el visor y el botón de descarga
 // =========================
-function loadSTL(url) {
-    loader.load(url, function (geometry) {
-        // Eliminar modelos anteriores (excepto la luz)
-        while (scene.children.length > 1) {
-            scene.remove(scene.children[1]);
-        }
+function displayModel(fileUrl) {
+    console.log(`Cargando modelo: ${fileUrl}`);
+    
+    // Asignar la URL al visor
+    viewer.src = fileUrl;
 
-        const material = new THREE.MeshStandardMaterial({ color: 0x0077ff });
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-
-        // Centrar modelo
-        geometry.computeBoundingBox();
-        const center = new THREE.Vector3();
-        geometry.boundingBox.getCenter(center);
-        mesh.position.sub(center);
-
-        controls.update();
-    });
-}
-
-// Animación
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-}
-animate();
-
-// =========================
-// Mostrar botón de descarga
-// =========================
-function showDownload(fileUrl) {
-    const section = document.getElementById("download-section");
-    const link = document.getElementById("download-link");
-
-    section.style.display = "block";
-    link.href = fileUrl;
-    link.download = fileUrl.split("/").pop();
+    // Mostrar el botón de descarga
+    downloadSection.style.display = "block";
+    downloadLink.href = fileUrl;
+    downloadLink.download = fileUrl.split("/").pop();
 }
 
 // =========================
 // Manejo de formularios
 // =========================
-document.getElementById("text-form").addEventListener("submit", async function (e) {
+
+// --- Generar desde Texto ---
+textForm.addEventListener("submit", async function (e) {
     e.preventDefault();
     console.log("📩 Enviando prompt...");
+    const button = this.querySelector("button");
+    button.disabled = true;
+    button.textContent = "Generando...";
 
-    const formData = new FormData(this);
+    try {
+        const formData = new FormData(this);
+        const response = await fetch("/generate/text", {
+            method: "POST",
+            body: formData
+        });
 
-    const response = await fetch("/generate/text", {
-        method: "POST",
-        body: formData
-    });
+        const result = await response.json();
+        console.log("Respuesta:", result);
 
-    const result = await response.json();
-    console.log("Respuesta:", result);
-
-    if (result.file) {
-        loadSTL(result.file);
-        showDownload(result.file);
+        if (result.file) {
+            displayModel(result.file);
+        } else if (result.error) {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error("Error en la solicitud:", error);
+        alert("Ocurrió un error al generar el modelo. Revisa la consola.");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Generar Modelo 3D";
     }
 });
 
-document.getElementById("file-form").addEventListener("submit", async function (e) {
+// --- Subir Archivo ---
+fileForm.addEventListener("submit", async function (e) {
     e.preventDefault();
     console.log("📤 Subiendo archivo...");
+    const button = this.querySelector("button");
+    button.disabled = true;
+    button.textContent = "Subiendo...";
 
-    const formData = new FormData(this);
+    try {
+        const formData = new FormData(this);
+        const response = await fetch("/generate/file", {
+            method: "POST",
+            body: formData
+        });
 
-    const response = await fetch("/generate/file", {
-        method: "POST",
-        body: formData
-    });
+        const result = await response.json();
+        console.log("Respuesta:", result);
 
-    const result = await response.json();
-    console.log("Respuesta:", result);
+        if (result.file) {
+            // La previsualización ya se muestra con el evento 'change'
+            // Solo actualizamos el enlace de descarga final
+            displayModel(result.file);
+        } else if (result.error) {
+            alert(`Error: ${result.error}`);
+        }
+    } catch (error) {
+        console.error("Error en la solicitud:", error);
+        alert("Ocurrió un error al subir el archivo. Revisa la consola.");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Subir y Visualizar";
+    }
+});
 
-    if (result.file) {
-        loadSTL(result.file);
-        showDownload(result.file);
+// --- Previsualización instantánea al seleccionar archivo ---
+fileInput.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        console.log("👁 Previsualizando archivo local...");
+        const localUrl = URL.createObjectURL(file);
+        displayModel(localUrl);
     }
 });

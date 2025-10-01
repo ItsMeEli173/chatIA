@@ -5,15 +5,13 @@
     <title>3D Generator ZCAA</title>
     <link rel="stylesheet" href="/static/styles.css">
 
-    <!-- Three.js desde CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/loaders/STLLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- model-viewer component -->
+    <script type-="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 <body>
     <header>
         <h1>✨ Generador 3D ZCAA</h1>
-        <p>Convierte texto o archivos en modelos STL listos para imprimir</p>
+        <p>Convierte texto o archivos en modelos 3D listos para visualizar y usar</p>
     </header>
 
     <main>
@@ -25,15 +23,15 @@
             <h3>📝 Generar desde texto</h3>
             <form id="text-form">
                 <input type="text" name="prompt" placeholder="Ejemplo: Cubo de 20mm" required>
-                <button type="submit">Generar STL</button>
+                <button type="submit">Generar Modelo 3D</button>
             </form>
 
             <hr>
 
             <!-- Formulario de archivo -->
-            <h3>📂 Subir STL</h3>
+            <h3>📂 Subir Archivo 3D</h3>
             <form id="file-form" enctype="multipart/form-data">
-                <input type="file" id="stl-input" name="file" accept=".stl" required>
+                <input type="file" id="stl-input" name="file" accept=".stl,.glb" required>
                 <button type="submit">Subir y Visualizar</button>
             </form>
 
@@ -41,11 +39,13 @@
 
             <!-- Viewer 3D -->
             <h3>👁 Vista previa</h3>
-            <div id="viewer"></div>
+            <div id="viewer-container">
+                <model-viewer id="viewer" src="" camera-controls auto-rotate ar shadow-intensity="1" alt="Vista previa del modelo 3D"></model-viewer>
+            </div>
 
             <!-- Botón de descarga -->
             <div id="download-section" style="display:none; margin-top:15px;">
-                <a id="download-link" href="#" download class="download-btn">⬇️ Descargar STL</a>
+                <a id="download-link" href="#" download class="download-btn">⬇️ Descargar Modelo</a>
             </div>
         </section>
     </main>

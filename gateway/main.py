@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
-from gateway.generator import generate_cube  # ahora desde gateway/generator.py
+from gateway.generator import generate_model_from_prompt  # ahora desde gateway/generator.py
 
 app = FastAPI()
 
@@ -30,7 +30,7 @@ def home():
 # ✅ Generar STL desde prompt (JSON + ruta para visor)
 @app.post("/generate/text")
 async def generate_from_text(prompt: str = Form(...)):
-    filepath = generate_cube(prompt, output_dir=str(UPLOAD_DIR))
+    filepath = await generate_model_from_prompt(prompt, output_dir=str(UPLOAD_DIR))
     filename = os.path.basename(filepath)
 
     return JSONResponse({

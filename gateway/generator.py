@@ -1,51 +1,81 @@
 # gateway/generator.py
 import os
-import numpy as np
-from stl import mesh
+import httpx
+import asyncio
 from pathlib import Path
+from dotenv import load_dotenv
 
+# Cargar variables de entorno desde .env
+load_dotenv()
 
-def generate_cube(prompt: str, output_dir: str = "uploads") -> str:
+# Usar la clave proporcionada directamente
+TRIPO_API_KEY = "tsk_XjkmdVhwxsNkC3u7zcBaNnT9wuKVoPbKCgI22iqdqfj"
+
+# Opcionalmente, cargar desde el entorno (método recomendado)
+# TRIPO_API_KEY = os.getenv("TRIPO_API_KEY")
+
+TRIPO_API_HOST = "https://api.tripo3d.ai"
+
+async def generate_model_from_prompt(prompt: str, output_dir: str = "uploads") -> str:
     """
-    Genera un cubo STL simple y lo guarda en la carpeta indicada.
-    El parámetro 'prompt' por ahora solo se usa para el nombre del archivo.
+    Genera un modelo 3D a partir de un prompt de texto usando la API de Tripo AI.
+    Se asegura de usar el modo 'draft' que es gratuito.
     """
-    # 8 vértices de un cubo
-    vertices = np.array([
-        [-1, -1, -1],
-        [+1, -1, -1],
-        [+1, +1, -1],
-        [-1, +1, -1],
-        [-1, -1, +1],
-        [+1, -1, +1],
-        [+1, +1, +1],
-        [-1, +1, +1]
-    ])
+    if not TRIPO_API_KEY:
+        raise ValueError("La clave de API de Tripo no fue encontrada. Asegúrate de que esté en el archivo .env")
 
-    # 12 triángulos que forman las 6 caras del cubo
-    faces = np.array([
-        [0, 3, 1], [1, 3, 2],
-        [0, 4, 7], [0, 7, 3],
-        [4, 5, 6], [4, 6, 7],
-        [5, 1, 2], [5, 2, 6],
-        [2, 3, 6], [3, 7, 6],
-        [0, 1, 5], [0, 5, 4]
-    ])
+    headers = {
+        "Authorization": f"Bearer {TRIPO_API_KEY}"
+    }
+    
+    # 1. Iniciar la tarea de generación
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        try:
+            # Aseguramos que sea 'draft' para que sea gratis
+            resp = await client.post(
+                f"{TRIPO_API_HOST}/v2/make-draft",
+                json={"prompt": prompt, "type": "model"},
+                headers=headers
+            )
+            resp.raise_for_status()
+            task_id = resp.json()["data"]["task_id"]
+        except httpx.HTTPStatusError as e:
+            print(f"Error al iniciar la generación: {e.response.text}")
+            raise
 
-    # Crear malla
-    cube = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
-    for i, f in enumerate(faces):
-        for j in range(3):
-            cube.vectors[i][j] = vertices[f[j], :]
+        # 2. Sondear el estado de la tarea
+        while True:
+            await asyncio.sleep(5)  # Esperar 5 segundos entre sondeos
+            try:
+                status_resp = await client.get(f"{TRIPO_API_HOST}/v2/status/{task_id}", headers=headers)
+                status_resp.raise_for_status()
+                data = status_resp.json()["data"]
 
-    # Asegurar carpeta de salida
+                if data["status"] == "success":
+                    download_url = data["output"]["url"]
+                    break
+                elif data["status"] == "failed":
+                    raise Exception(f"La generación del modelo falló: {data.get('error')}")
+
+            except httpx.HTTPStatusError as e:
+                print(f"Error al sondear el estado: {e.response.text}")
+                raise
+        
+        # 3. Descargar el modelo generado (formato .glb)
+        try:
+            model_resp = await client.get(download_url)
+            model_resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            print(f"Error al descargar el modelo: {e.response.text}")
+            raise
+
+    # 4. Guardar el archivo en la carpeta de uploads
     os.makedirs(output_dir, exist_ok=True)
-
-    # Nombre de archivo basado en el prompt
     safe_name = prompt.replace(" ", "_").lower()
-    filepath = Path(output_dir) / f"{safe_name}_cube.stl"
+    # El formato de salida de la API es .glb
+    filepath = Path(output_dir) / f"{safe_name}_model.glb"
 
-    # Guardar STL
-    cube.save(str(filepath))
+    with open(filepath, "wb") as f:
+        f.write(model_resp.content)
 
     return str(filepath)
