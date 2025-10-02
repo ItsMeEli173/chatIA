@@ -5,7 +5,11 @@ from fastapi.staticfiles import StaticFiles
 import os
 import httpx
 from pathlib import Path
+from dotenv import load_dotenv
 from gateway.generator import generate_model_from_prompt, generate_model_from_image
+from gateway.gemini_service import GeminiService
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -13,6 +17,9 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
 STATIC_DIR = BASE_DIR.parent / "static"
+
+# Inicializar servicios
+gemini_service = GeminiService()
 
 # Servir frontend estático (index.html, css, js)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -28,7 +35,7 @@ def home():
     return index_file.read_text(encoding="utf-8")
 
 
-# ✅ Generar desde texto
+# ✅ Generar desde texto (Tripo AI)
 @app.post("/generate/text")
 async def generate_from_text(prompt: str = Form(...)):
     try:
@@ -47,7 +54,7 @@ async def generate_from_text(prompt: str = Form(...)):
             content={"error": f"Ocurrió un error inesperado: {str(e)}"}
         )
 
-# ✅ Generar desde imagen
+# ✅ Generar desde imagen (Tripo AI)
 @app.post("/generate/image")
 async def generate_from_image_endpoint(image: UploadFile = File(...)):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -75,7 +82,17 @@ async def generate_from_image_endpoint(image: UploadFile = File(...)):
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
 
-
+# ✅ Chat con Gemini
+@app.post("/chat/gemini")
+async def chat_with_gemini(message: str = Form(...)):
+    try:
+        response_text = gemini_service.send_message(message)
+        return JSONResponse({"response": response_text})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Ocurrió un error al comunicarse con Gemini: {str(e)}"}
+        )
 
 
 # ✅ Descargar archivo generado por nombre

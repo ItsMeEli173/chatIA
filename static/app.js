@@ -3,6 +3,10 @@ console.log("✅ app.js cargado");
 // =========================
 // Elementos del DOM
 // =========================
+const modelSelector = document.getElementById("model-selector");
+const tripo3dContainer = document.getElementById("tripo-3d-container");
+const geminiChatContainer = document.getElementById("gemini-chat-container");
+
 const viewer = document.getElementById("viewer");
 const generationForm = document.getElementById("generation-form");
 const promptInput = document.getElementById("prompt-input");
@@ -14,13 +18,25 @@ const downloadSection = document.getElementById("download-section");
 const downloadGlb = document.getElementById("download-glb");
 const downloadStl = document.getElementById("download-stl");
 
-
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatMessages = document.getElementById("chat-messages");
 
 let selectedImageFile = null;
 
 // =========================
-// Función para mostrar el visor y los botones de descarga
+// Funciones de UI
 // =========================
+function showTripo3DUI() {
+    tripo3dContainer.style.display = "block";
+    geminiChatContainer.style.display = "none";
+}
+
+function showGeminiChatUI() {
+    tripo3dContainer.style.display = "none";
+    geminiChatContainer.style.display = "block";
+}
+
 function displayModel(files) {
     console.log(`Cargando modelo: ${files.glb}`);
     viewer.src = files.glb;
@@ -34,9 +50,37 @@ function displayModel(files) {
     downloadSection.style.display = "block";
 }
 
+function addChatMessage(message, sender) {
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("chat-message", sender);
+
+    // Basic markdown to HTML conversion for Gemini responses
+    if (sender === "gemini") {
+        let formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
+        formattedMessage = formattedMessage.replace(/\n/g, '<br>'); // Newlines
+        msgDiv.innerHTML = formattedMessage;
+    } else {
+        msgDiv.textContent = message;
+    }
+    
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+}
+
 // =========================
-// Manejo del formulario de generación
+// Manejo de eventos
 // =========================
+
+// Selector de modelo
+modelSelector.addEventListener("change", function() {
+    if (this.value === "tripo-3d") {
+        showTripo3DUI();
+    } else if (this.value === "gemini-chat") {
+        showGeminiChatUI();
+    }
+});
+
+// Formulario de generación 3D
 generationForm.addEventListener("submit", async function (e) {
     e.preventDefault();
     const button = this.querySelector("button");
@@ -88,9 +132,7 @@ generationForm.addEventListener("submit", async function (e) {
     }
 });
 
-// =========================
 // Manejo de la subida de imagen
-// =========================
 imageInput.addEventListener("change", function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -107,13 +149,52 @@ imageInput.addEventListener("change", function(e) {
     }
 });
 
-// =========================
 // Manejo para quitar la imagen
-// =========================
 removeImageBtn.addEventListener("click", function() {
     selectedImageFile = null;
     imageInput.value = ""; // Resetear el input de archivo
     imagePreviewContainer.style.display = "none";
     imagePreview.src = "#";
     promptInput.placeholder = "Ej: Un coche deportivo rojo";
+});
+
+// Formulario de chat de Gemini
+chatForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    addChatMessage(message, "user");
+    chatInput.value = "";
+    chatInput.disabled = true;
+    chatForm.querySelector("button").disabled = true;
+
+    try {
+        const formData = new FormData();
+        formData.append("message", message);
+
+        const response = await fetch("/chat/gemini", {
+            method: "POST",
+            body: formData,
+        });
+
+        const result = await response.json();
+        if (result.response) {
+            addChatMessage(result.response, "gemini");
+        } else if (result.error) {
+            addChatMessage(`Error: ${result.error}`, "gemini");
+        }
+    } catch (error) {
+        console.error("Error en la solicitud de chat:", error);
+        addChatMessage("Ocurrió un error al comunicarse con Gemini.", "gemini");
+    } finally {
+        chatInput.disabled = false;
+        chatForm.querySelector("button").disabled = false;
+        chatInput.focus();
+    }
+});
+
+// Inicializar la UI al cargar la página
+document.addEventListener("DOMContentLoaded", () => {
+    showTripo3DUI(); // Mostrar la UI de Tripo 3D por defecto
 });

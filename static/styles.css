@@ -162,3 +162,66 @@ footer {
     margin-right: 15px;
     border-radius: 10px;
 }
+
+#model-selector {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    font-size: 1em;
+}
+
+#gemini-chat-container {
+    text-align: left;
+}
+
+#chat-messages {
+    border: 1px solid #eee;
+    padding: 10px;
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+}
+
+.chat-message {
+    margin-bottom: 8px;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.chat-message.user {
+    background-color: #e0f7fa; /* Light blue for user */
+    color: #007bff;
+    margin-left: auto;
+    text-align: right;
+}
+
+.chat-message.gemini {
+    background-color: #f1f8e9; /* Light green for Gemini */
+    color: #333;
+    margin-right: auto;
+    text-align: left;
+}
+
+.chat-message strong {
+    font-weight: bold;
+    color: #3f51b5; /* A distinct color for bold text */
+}
+
+.chat-message p {
+    margin: 0;
+    padding: 0;
+}
+
+.chat-message br {
+    display: block;
+    margin-bottom: 0.5em;
+}
