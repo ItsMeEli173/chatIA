@@ -3,8 +3,9 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import os
+import httpx
 from pathlib import Path
-from gateway.generator import generate_model_from_prompt  # ahora desde gateway/generator.py
+from gateway.generator import generate_model_from_prompt, generate_model_from_image
 
 app = FastAPI()
 
@@ -27,34 +28,54 @@ def home():
     return index_file.read_text(encoding="utf-8")
 
 
-# ✅ Generar STL desde prompt (JSON + ruta para visor)
+# ✅ Generar desde texto
 @app.post("/generate/text")
 async def generate_from_text(prompt: str = Form(...)):
-    filepath = await generate_model_from_prompt(prompt, output_dir=str(UPLOAD_DIR))
-    filename = os.path.basename(filepath)
+    try:
+        file_paths = await generate_model_from_prompt(prompt, output_dir=str(UPLOAD_DIR))
+        
+        return JSONResponse({
+            "message": f"Modelo 3D generado desde texto: {prompt}",
+            "files": {
+                "glb": f"/uploads/{os.path.basename(file_paths['glb'])}",
+                "stl": f"/uploads/{os.path.basename(file_paths['stl'])}"
+            }
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Ocurrió un error inesperado: {str(e)}"}
+        )
 
-    return JSONResponse({
-        "message": f"Modelo 3D generado desde texto: {prompt}",
-        "file": f"/uploads/{filename}"  # URL accesible desde frontend
-    })
-
-
-
-# ✅ Subir archivo STL y guardarlo → devuelve URL accesible
-@app.post("/generate/file")
-async def generate_from_file(file: UploadFile = File(...)):
+# ✅ Generar desde imagen
+@app.post("/generate/image")
+async def generate_from_image_endpoint(image: UploadFile = File(...)):
     os.makedirs(UPLOAD_DIR, exist_ok=True)
-    filepath = UPLOAD_DIR / file.filename
+    
+    temp_filepath = UPLOAD_DIR / image.filename
+    with open(temp_filepath, "wb") as f:
+        f.write(await image.read())
 
-    contents = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    try:
+        file_paths = await generate_model_from_image(str(temp_filepath), output_dir=str(UPLOAD_DIR))
 
-    return JSONResponse({
-        "message": f"Archivo recibido: {file.filename}",
-        "size": len(contents),
-        "file": f"/uploads/{file.filename}"
-    })
+        return JSONResponse({
+            "message": f"Modelo 3D generado desde imagen: {image.filename}",
+            "files": {
+                "glb": f"/uploads/{os.path.basename(file_paths['glb'])}",
+                "stl": f"/uploads/{os.path.basename(file_paths['stl'])}"
+            }
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Ocurrió un error inesperado durante el procesamiento: {str(e)}"}
+        )
+    finally:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
+
+
 
 
 # ✅ Descargar archivo generado por nombre
