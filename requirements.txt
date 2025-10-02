@@ -9,3 +9,4 @@ tripo3d
 boto3
 requests
 httpx
+google-generativeai
