@@ -56,9 +56,21 @@ function addChatMessage(message, sender) {
 
     // Basic markdown to HTML conversion for Gemini responses
     if (sender === "gemini") {
-        let formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
-        formattedMessage = formattedMessage.replace(/\n/g, '<br>'); // Newlines
+        let formattedMessage = message;
+
+        // Bold
+        formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italics
+        formattedMessage = formattedMessage.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Headings
+        formattedMessage = formattedMessage.replace(/^###\s*(.*)$/gm, '<h3>$1</h3>');
+        formattedMessage = formattedMessage.replace(/^##\s*(.*)$/gm, '<h2>$1</h2>');
+        formattedMessage = formattedMessage.replace(/^#\s*(.*)$/gm, '<h1>$1</h1>');
+        // Newlines
+        formattedMessage = formattedMessage.replace(/\n/g, '<br>');
+
         msgDiv.innerHTML = formattedMessage;
+
     } else {
         msgDiv.textContent = message;
     }

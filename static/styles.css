@@ -211,9 +211,36 @@ footer {
     text-align: left;
 }
 
+.chat-message h3 {
+    font-size: 1.2em;
+}
+
 .chat-message strong {
     font-weight: bold;
     color: #3f51b5; /* A distinct color for bold text */
+}
+
+.chat-message em {
+    font-style: italic;
+    color: #6a1b9a; /* A distinct color for italic text */
+}
+
+.chat-message h1, .chat-message h2, .chat-message h3 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+}
+
+.chat-message h1 {
+    font-size: 1.8em;
+}
+
+.chat-message h2 {
+    font-size: 1.5em;
+}
+
+.chat-message h3 {
+    font-size: 1.2em;
 }
 
 .chat-message p {
