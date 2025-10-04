@@ -208,5 +208,6 @@ chatForm.addEventListener("submit", async function(e) {
 
 // Inicializar la UI al cargar la página
 document.addEventListener("DOMContentLoaded", () => {
-    showTripo3DUI(); // Mostrar la UI de Tripo 3D por defecto
+    modelSelector.value = "gemini-chat"; // Establecer Gemini como el modelo por defecto
+    showGeminiChatUI(); // Mostrar la UI de Gemini por defecto
 });
