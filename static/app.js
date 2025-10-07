@@ -74,13 +74,6 @@ function addChatMessage(message, sender) {
         formattedMessage = formattedMessage.replace(/^#\s*(.*)$/gm, '<h1>$1</h1>');
         formattedMessage = formattedMessage.replace(/\n/g, '<br>');
         msgDiv.innerHTML = formattedMessage;
-
-        if (senderClass === "huggingface") {
-            msgDiv.style.backgroundColor = "#f1f8e9";
-            msgDiv.style.color = "#333";
-            msgDiv.style.marginRight = "auto";
-            msgDiv.style.textAlign = "left";
-        }
     } else {
         msgDiv.textContent = message;
     }
