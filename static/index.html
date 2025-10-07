@@ -23,6 +23,7 @@
             <h2>Selecciona un Modelo de IA</h2>
             <select id="model-selector">
                 <option value="gemini-chat">Gemini (Chat de Texto)</option>
+                <option value="huggingface-chat">Hugging Face (Chat de Texto)</option>
                 <option value="tripo-3d">Tripo AI (Deshabilitado)</option>
             </select>
 
@@ -64,9 +65,9 @@
                 </div>
             </div>
 
-            <!-- Contenedor para el chat de Gemini -->
-            <div id="gemini-chat-container" style="display: none;">
-                <h3>Chat con Gemini</h3>
+            <!-- Contenedor para el chat -->
+            <div id="chat-container" style="display: none;">
+                <h3 id="chat-title"></h3>
                 <div id="chat-messages">
                     <!-- Los mensajes del chat se insertarán aquí -->
                 </div>

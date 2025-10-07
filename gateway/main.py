@@ -5,21 +5,32 @@ from fastapi.staticfiles import StaticFiles
 import os
 import httpx
 from pathlib import Path
+import sys
 from dotenv import load_dotenv
 from gateway.generator import generate_model_from_prompt, generate_model_from_image
 from gateway.gemini_service import GeminiService
+from gateway.huggingface_service import HuggingFaceService
 
 load_dotenv()
 
 app = FastAPI()
 
-# 📂 Definir carpetas
-BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-STATIC_DIR = BASE_DIR.parent / "static"
+# 📂 Definir carpetas (compatible con PyInstaller)
+if getattr(sys, 'frozen', False):
+    # Running as a bundle
+    base_path = Path(sys._MEIPASS)
+else:
+    # Running as a script
+    base_path = Path(__file__).resolve().parent.parent
+
+STATIC_DIR = base_path / "static"
+# The 'uploads' folder is inside 'gateway' in the source,
+# and we replicate that structure in the bundle.
+UPLOAD_DIR = base_path / "gateway" / "uploads"
 
 # Inicializar servicios
 gemini_service = GeminiService()
+huggingface_service = HuggingFaceService()
 
 # Servir frontend estático (index.html, css, js)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -92,6 +103,19 @@ async def chat_with_gemini(message: str = Form(...)):
         return JSONResponse(
             status_code=500,
             content={"error": f"Ocurrió un error al comunicarse con Gemini: {str(e)}"}
+        )
+
+
+# ✅ Chat con Hugging Face
+@app.post("/chat/huggingface")
+async def chat_with_huggingface(message: str = Form(...)):
+    try:
+        response_text = huggingface_service.send_message(message)
+        return JSONResponse({"response": response_text})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Ocurrió un error al comunicarse con Hugging Face: {str(e)}"}
         )
 
 

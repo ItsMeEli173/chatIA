@@ -5,7 +5,8 @@ console.log("✅ app.js cargado");
 // =========================
 const modelSelector = document.getElementById("model-selector");
 const tripo3dContainer = document.getElementById("tripo-3d-container");
-const geminiChatContainer = document.getElementById("gemini-chat-container");
+const chatContainer = document.getElementById("chat-container");
+const chatTitle = document.getElementById("chat-title");
 
 const viewer = document.getElementById("viewer");
 const generationForm = document.getElementById("generation-form");
@@ -23,18 +24,27 @@ const chatInput = document.getElementById("chat-input");
 const chatMessages = document.getElementById("chat-messages");
 
 let selectedImageFile = null;
+let selectedChatModel = "gemini-chat"; // 'gemini-chat' or 'huggingface-chat'
 
 // =========================
 // Funciones de UI
 // =========================
 function showTripo3DUI() {
     tripo3dContainer.style.display = "block";
-    geminiChatContainer.style.display = "none";
+    chatContainer.style.display = "none";
 }
 
-function showGeminiChatUI() {
+function showChatUI() {
     tripo3dContainer.style.display = "none";
-    geminiChatContainer.style.display = "block";
+    chatContainer.style.display = "block";
+}
+
+function updateChatTitle() {
+    if (selectedChatModel === "gemini-chat") {
+        chatTitle.textContent = "Chat con Gemini";
+    } else if (selectedChatModel === "huggingface-chat") {
+        chatTitle.textContent = "Chat con Hugging Face";
+    }
 }
 
 function displayModel(files) {
@@ -52,25 +62,18 @@ function displayModel(files) {
 
 function addChatMessage(message, sender) {
     const msgDiv = document.createElement("div");
-    msgDiv.classList.add("chat-message", sender);
+    const senderClass = sender === 'user' ? 'user' : selectedChatModel.split('-')[0]; // 'gemini' or 'huggingface'
+    msgDiv.classList.add("chat-message", senderClass);
 
-    // Basic markdown to HTML conversion for Gemini responses
-    if (sender === "gemini") {
+    if (senderClass === "gemini" || senderClass === "huggingface") {
         let formattedMessage = message;
-
-        // Bold
         formattedMessage = formattedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Italics
         formattedMessage = formattedMessage.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        // Headings
         formattedMessage = formattedMessage.replace(/^###\s*(.*)$/gm, '<h3>$1</h3>');
         formattedMessage = formattedMessage.replace(/^##\s*(.*)$/gm, '<h2>$1</h2>');
         formattedMessage = formattedMessage.replace(/^#\s*(.*)$/gm, '<h1>$1</h1>');
-        // Newlines
         formattedMessage = formattedMessage.replace(/\n/g, '<br>');
-
         msgDiv.innerHTML = formattedMessage;
-
     } else {
         msgDiv.textContent = message;
     }
@@ -87,8 +90,10 @@ function addChatMessage(message, sender) {
 modelSelector.addEventListener("change", function() {
     if (this.value === "tripo-3d") {
         showTripo3DUI();
-    } else if (this.value === "gemini-chat") {
-        showGeminiChatUI();
+    } else {
+        selectedChatModel = this.value;
+        updateChatTitle();
+        showChatUI();
     }
 });
 
@@ -170,7 +175,7 @@ removeImageBtn.addEventListener("click", function() {
     promptInput.placeholder = "Ej: Un coche deportivo rojo";
 });
 
-// Formulario de chat de Gemini
+// Formulario de chat
 chatForm.addEventListener("submit", async function(e) {
     e.preventDefault();
     const message = chatInput.value.trim();
@@ -181,24 +186,27 @@ chatForm.addEventListener("submit", async function(e) {
     chatInput.disabled = true;
     chatForm.querySelector("button").disabled = true;
 
+    const endpoint = selectedChatModel === 'gemini-chat' ? '/chat/gemini' : '/chat/huggingface';
+    const botName = selectedChatModel === 'gemini-chat' ? 'Gemini' : 'Hugging Face';
+
     try {
         const formData = new FormData();
         formData.append("message", message);
 
-        const response = await fetch("/chat/gemini", {
+        const response = await fetch(endpoint, {
             method: "POST",
             body: formData,
         });
 
         const result = await response.json();
         if (result.response) {
-            addChatMessage(result.response, "gemini");
+            addChatMessage(result.response, "bot");
         } else if (result.error) {
-            addChatMessage(`Error: ${result.error}`, "gemini");
+            addChatMessage(`Error: ${result.error}`, "bot");
         }
     } catch (error) {
         console.error("Error en la solicitud de chat:", error);
-        addChatMessage("Ocurrió un error al comunicarse con Gemini.", "gemini");
+        addChatMessage(`Ocurrió un error al comunicarse con ${botName}.`, "bot");
     } finally {
         chatInput.disabled = false;
         chatForm.querySelector("button").disabled = false;
@@ -208,6 +216,8 @@ chatForm.addEventListener("submit", async function(e) {
 
 // Inicializar la UI al cargar la página
 document.addEventListener("DOMContentLoaded", () => {
-    modelSelector.value = "gemini-chat"; // Establecer Gemini como el modelo por defecto
-    showGeminiChatUI(); // Mostrar la UI de Gemini por defecto
+    modelSelector.value = "gemini-chat";
+    selectedChatModel = "gemini-chat";
+    updateChatTitle();
+    showChatUI();
 });

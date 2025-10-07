@@ -211,6 +211,13 @@ footer {
     text-align: left;
 }
 
+.chat-message.huggingface {
+    background-color: #f1f8e9; /* Light green for Gemini */
+    color: #333;
+    margin-right: auto;
+    text-align: left;
+}
+
 .chat-message h3 {
     font-size: 1.2em;
 }

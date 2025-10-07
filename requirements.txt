@@ -10,3 +10,4 @@ boto3
 requests
 httpx
 google-generativeai
+huggingface-hub
